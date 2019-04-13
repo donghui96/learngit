@@ -2,9 +2,11 @@
 #include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include <EEPROM.h>
+#include <SoftwareSerial.h>
 #include "F:\Arduino\libraries\hz.c"
 #include <ESP8266HTTPClient.h>
 #define LED 2
+SoftwareSerial swSer(D7, D8, false, 256);//软串口
 String payload = "";              //获取数据储存变量
 String com, tem1, tem2, humi, temnow, sta, state1, state2, time0, time1, time2, english;
 String webadd = "http://flash.weather.com.cn/wmaps/xml/hunan.xml";    //天气接口地址
@@ -49,6 +51,7 @@ void smartConfig()
 void setup()
 {
   Serial.begin(115200);
+   swSer.begin(115200);
   sao_sao();
   pinMode(LED, OUTPUT);
   digitalWrite(LED, 0);
@@ -57,12 +60,13 @@ void setup()
 }
 void sao_sao()
 {
-  Serial.print("CLS(0);");
-  Serial.print("BPIC(1,45,29,17);");
-  Serial.print("DS16(36,8,'"); Serial.print(hz[2]); Serial.print("',13,0);");
-  Serial.print("\r\n");
+ swSer.print("CLS(0);");
+ swSer.print("BPIC(1,45,29,17);");
+ swSer.print("DS16(36,8,'");swSer.print(hz[2]);swSer.print("',13,0);");
+ swSer.print("\r\n");
 }
 void setup_wifi() {
+  sao_sao();
  EEPROM.begin(512);
   CONFIG buf;
   EEPROM.get<CONFIG>(0, buf);
@@ -83,16 +87,16 @@ void setup_wifi() {
 }
 void open_show()
 {
-  Serial.print("CLS(0);");
+ swSer.print("CLS(0);");
   delay(200);
-  Serial.print("CLS(0);"); //CLS(0);
-  Serial.print("DS12(10,20,'"); Serial.print(hz[0]); Serial.print("',4,0);"); //DS12(10,20,'晴天',4,0);
-  Serial.print("CBOX(3,3,90,120,10,5);");
-  Serial.print("CBOX(2,125,217,173,5,5);");
-  Serial.print("PL(3,53,90,53,5);");
-  Serial.print("CIR(150,60,50,1);");
-  Serial.print("PIC(125,40,13);");
-  Serial.print("\r\n");
+ swSer.print("CLS(0);"); //CLS(0);
+ swSer.print("DS12(10,20,'");swSer.print(hz[0]);swSer.print("',4,0);"); //DS12(10,20,'晴天',4,0);
+ swSer.print("CBOX(3,3,90,120,10,5);");
+ swSer.print("CBOX(2,125,217,173,5,5);");
+ swSer.print("PL(3,53,90,53,5);");
+ swSer.print("CIR(150,60,50,1);");
+ swSer.print("PIC(125,40,13);");
+ swSer.print("\r\n");
   delay(200);
 }
 /*****************************************http数据获取*******************************************/
@@ -156,16 +160,16 @@ void get_english()
 void tianqi()
 {
   switch (state1.toInt()) {
-    case 0: Serial.print("PIC(43,11,1);"); Serial.print("DS12(10,20,'"); Serial.print(tq[0]); Serial.println("',4,0);"); break; //晴天
-    case 1: Serial.print("PIC(43,11,2);"); Serial.print("DS12(10,20,'"); Serial.print(tq[1]); Serial.println("',4,0);"); break;//多云
-    case 2: Serial.print("PIC(43,11,3);"); Serial.print("DS12(10,20,'"); Serial.print(tq[2]); Serial.println("',4,0);"); break;//阴天
-    case 3: Serial.print("PIC(43,11,4);"); Serial.print("DS12(10,20,'"); Serial.print(tq[4]); Serial.println("',4,0);"); break;//阵雨
-    case 4: Serial.print("PIC(43,11,4);"); Serial.print("DS12(10,20,'"); Serial.print(tq[5]); Serial.println("',4,0);"); break;//雷阵雨
-    case 7: Serial.print("PIC(43,11,4);"); Serial.print("DS12(10,20,'"); Serial.print(tq[3]); Serial.println("',4,0);"); break;//小雨
-    case 8: Serial.print("PIC(43,11,4);"); Serial.print("DS12(10,20,'"); Serial.print(tq[6]); Serial.println("',4,0);"); break;//中雨
-    case 9: Serial.print("PIC(43,11,4);"); Serial.print("DS12(10,20,'"); Serial.print(tq[7]); Serial.println("',4,0);"); break;//大雨
-    case 5: Serial.print("PIC(43,11,5);"); Serial.print("DS12(10,20,'"); Serial.print(tq[8]); Serial.println("',4,0);"); break;//雪天
-    case 6: Serial.print("PIC(43,11,5);"); Serial.print("DS12(10,20,'"); Serial.print(tq[8]); Serial.println("',4,0);"); break;//雪天
+    case 0:swSer.print("PIC(43,11,1);");swSer.print("DS12(10,20,'");swSer.print(tq[0]);swSer.println("',4,0);"); break; //晴天
+    case 1:swSer.print("PIC(43,11,2);");swSer.print("DS12(10,20,'");swSer.print(tq[1]);swSer.println("',4,0);"); break;//多云
+    case 2:swSer.print("PIC(43,11,3);");swSer.print("DS12(10,20,'");swSer.print(tq[2]);swSer.println("',4,0);"); break;//阴天
+    case 3:swSer.print("PIC(43,11,4);");swSer.print("DS12(10,20,'");swSer.print(tq[4]);swSer.println("',4,0);"); break;//阵雨
+    case 4:swSer.print("PIC(43,11,4);");swSer.print("DS12(10,20,'");swSer.print(tq[5]);swSer.println("',4,0);"); break;//雷阵雨
+    case 7:swSer.print("PIC(43,11,4);");swSer.print("DS12(10,20,'");swSer.print(tq[3]);swSer.println("',4,0);"); break;//小雨
+    case 8:swSer.print("PIC(43,11,4);");swSer.print("DS12(10,20,'");swSer.print(tq[6]);swSer.println("',4,0);"); break;//中雨
+    case 9:swSer.print("PIC(43,11,4);");swSer.print("DS12(10,20,'");swSer.print(tq[7]);swSer.println("',4,0);"); break;//大雨
+    case 5:swSer.print("PIC(43,11,5);");swSer.print("DS12(10,20,'");swSer.print(tq[8]);swSer.println("',4,0);"); break;//雪天
+    case 6:swSer.print("PIC(43,11,5);");swSer.print("DS12(10,20,'");swSer.print(tq[8]);swSer.println("',4,0);"); break;//雪天
   }
   delay(200);
 }
@@ -195,31 +199,31 @@ void data() {
 /*********************************************屏幕显示**************************************************/
 void show()
 {
-  Serial.print("DS12(7,60,'"); Serial.print(hz[6]); Serial.print(humi); Serial.print("',13);");
-  Serial.print("DS12(7,75,'"); Serial.print(hz[3]); Serial.print(tem1); Serial.print("c',3);"); //DS12(7,65,'最高温度:',1);
-  Serial.print("DS12(7,90,'"); Serial.print(hz[4]); Serial.print(temnow); Serial.print("c',3);"); //DS12(7,85,'当前温度：',3);
-  Serial.print("DS12(7,105,'"); Serial.print(hz[5]); Serial.print(tem2); Serial.print("c',3);"); //DS12(7,105,'最低温度：',13);
-  Serial.print("DS12(100,109,'"); Serial.print(time0); Serial.println("',1);"); //BS12(8,140,216,4,'日期时间',1);
+ swSer.print("DS12(7,60,'");swSer.print(hz[6]);swSer.print(humi);swSer.print("',13);");
+ swSer.print("DS12(7,75,'");swSer.print(hz[3]);swSer.print(tem1);swSer.print("c',3);"); //DS12(7,65,'最高温度:',1);
+ swSer.print("DS12(7,90,'");swSer.print(hz[4]);swSer.print(temnow);swSer.print("c',3);"); //DS12(7,85,'当前温度：',3);
+ swSer.print("DS12(7,105,'");swSer.print(hz[5]);swSer.print(tem2);swSer.print("c',3);"); //DS12(7,105,'最低温度：',13);
+ swSer.print("DS12(100,109,'");swSer.print(time0);swSer.println("',1);"); //BS12(8,140,216,4,'日期时间',1);
   delay(200);
-  Serial.print("BS12(8,130,210,2,'"); Serial.print("  "); Serial.println("',13);");//局部刷新--原创000
+ swSer.print("BS12(8,130,210,2,'");swSer.print("  ");swSer.println("',13);");//局部刷新--原创000
   //经过我的研究发现英文中不能出现“'”这个符号，例如：that's就不行，所以将其替换为“.”
   english.replace("'", ".");
-  Serial.print("BS12(8,130,210,1,'"); Serial.print(english); Serial.println("',13);");
+ swSer.print("BS12(8,130,210,1,'");swSer.print(english);swSer.println("',13);");
   delay(300);
 }
 void loop()
 {
   digitalWrite(LED, 1);
-  Serial.println("PIC(141,53,10);");
+ swSer.println("PIC(141,53,10);");
   get_time();
   get_english();
   http();
-  Serial.println("PIC(135,48,11);");
+ swSer.println("PIC(135,48,11);");
   data();
-  Serial.println("PIC(132,45,12);");
+ swSer.println("PIC(132,45,12);");
   show();
   tianqi();
   digitalWrite(LED, 0);
-  Serial.println("PIC(125,40,13);");
+ swSer.println("PIC(125,40,13);");
   delay(1000);
 }
