@@ -1,20 +1,21 @@
+
 #include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
+#include <EEPROM.h>
 #include "F:\Arduino\libraries\hz.c"
 #include <ESP8266HTTPClient.h>
-#include <EEPROM.h>
-long lastMsg = 0;
-struct CONFIG {
-char ssid[32];
-char password[32];
-};
 #define LED 2
 String payload = "";              //获取数据储存变量
 String com, tem1, tem2, humi, temnow, sta, state1, state2, time0, time1, time2, english;
-String webadd = "http://flash.weather.com.cn/wmaps/xml/zhengzhou.xml";    //天气接口地址
+String webadd = "http://flash.weather.com.cn/wmaps/xml/hunan.xml";    //天气接口地址
+String city_id = "101180101";//河南郑州
 String time_url = "http://quan.suning.com/getSysTime.do";   //时间接口地址
 String english_url = "http://open.iciba.com/dsapi/";   //英语接口地址
 String daytime = "";
+struct CONFIG {  //结构体存放账号密码
+  char ssid[32];
+  char password[32];
+};
 void smartConfig()
 {
   WiFi.mode(WIFI_STA);
@@ -30,7 +31,7 @@ void smartConfig()
     delay(500);
     if (WiFi.smartConfigDone())
     {
-     EEPROM.begin(512);
+       EEPROM.begin(512);
       CONFIG buf;
       Serial.println("SmartConfig Success");
       Serial.printf("SSID:%s\r\n", WiFi.SSID().c_str());
@@ -39,24 +40,30 @@ void smartConfig()
       strcpy(buf.password, WiFi.psk().c_str());
       EEPROM.put<CONFIG>(0, buf);
       EEPROM.commit();
+      Serial.println(buf.ssid);
+      Serial.println(buf.password);
       break;
     }
   }
 }
-
-void  em_read()
- {
-  EEPROM.begin(512);
-  CONFIG buf;
-  EEPROM.get<CONFIG>(0, buf);
-  Serial.println(buf.ssid);
-  Serial.println(buf.password);
-  EEPROM.commit();
-  }
-  void peiwang()
+void setup()
 {
+  Serial.begin(115200);
   sao_sao();
-  EEPROM.begin(512);
+  pinMode(LED, OUTPUT);
+  digitalWrite(LED, 0);
+  setup_wifi();
+  open_show();
+}
+void sao_sao()
+{
+  Serial.print("CLS(0);");
+  Serial.print("BPIC(1,45,29,17);");
+  Serial.print("DS16(36,8,'"); Serial.print(hz[2]); Serial.print("',13,0);");
+  Serial.print("\r\n");
+}
+void setup_wifi() {
+ EEPROM.begin(512);
   CONFIG buf;
   EEPROM.get<CONFIG>(0, buf);
   Serial.println(buf.ssid);
@@ -64,24 +71,15 @@ void  em_read()
   EEPROM.commit();
   WiFi.begin(buf.ssid, buf.password);
   long lastMsg = millis();
-   
   while (WiFi.status() != WL_CONNECTED) {
-  delay(500);
-  Serial.print(".");
-   long now = millis();
-    if (now - lastMsg > 20000) {
-      smartConfig();  //微信智能配网 
-      sao_sao();
+    delay(500);
+    Serial.print(".");
+    long now = millis();
+    if (now - lastMsg > 10000) {
+      smartConfig();  //微信智能配网
       break;
     }
   }
-  }
-void sao_sao()
-{
-  Serial.print("CLS(0);");
-  Serial.print("BPIC(1,45,29,17);");
-  Serial.print("DS16(36,8,'"); Serial.print(hz[2]); Serial.print("',13,0);");
-  Serial.print("\r\n");
 }
 void open_show()
 {
@@ -105,7 +103,7 @@ void http() {
   if (httpCode > 0) {
     payload = http.getString();
     //Serial.println(payload);
-    int a = payload.indexOf("101180101");//自己搜索链接可知指定城市的id郑州市的id为‘101180101’
+    int a = payload.indexOf(city_id);//自己搜索链接可知指定城市的id郑州市的id为‘101180101’
     //indexof();在字符串中中查找字符位置，返回值为给定字符的第一个位置，查找失败返回-1
     com = payload.substring(a - 280, a + 12);
     //字符串解析函数：substring(?,...),返回值为指定位置的字符串值
@@ -124,11 +122,10 @@ void get_time()
     payload = http.getString();
     //Serial.println(payload);
     /************************************json 数据处理********************************************/
-    DynamicJsonDocument doc(1024);
+    DynamicJsonBuffer jsonBuffer;
     String  input =   payload;
-    deserializeJson(doc, input);
-    JsonObject obj = doc.as<JsonObject>();
-    String  daytime = obj["sysTime2"];
+    JsonObject& root = jsonBuffer.parseObject(input);
+    String  daytime =  root[String("sysTime2")];
     time0 = daytime;
     time1 = daytime.substring(0, 10);//2018-06-17
     time2 =  daytime.substring(11, 19);//2018-06-17
@@ -145,12 +142,12 @@ void get_english()
     payload = http.getString();
     //Serial.println(payload);
     /*******json 数据处理******/
-    DynamicJsonDocument doc(1024);
+    DynamicJsonBuffer jsonBuffer;
     String  input =   payload;
-    deserializeJson(doc, input);
-    JsonObject obj = doc.as<JsonObject>();
-    String  content = obj["content"];
-    english = content;
+    JsonObject& root = jsonBuffer.parseObject(input);
+    String  content =  root[String("content")];
+    if(content.length()>100) english = content.substring(0, 100); //修复每日英语数据过长无法显示的问题。
+    else english = content;
     //Serial.println(english);
   }
   http.end();
@@ -176,15 +173,15 @@ void tianqi()
 void data() {
   int i = 0;
   i = com.indexOf("tem1");
-  tem1 = com.substring(i + 6, i + 8);
+  tem1 = com.substring(i + 6, i + 9);
   i = 0;
   i = com.indexOf("tem2");  //tem2="24"
-  tem2 = com.substring(i + 6, i + 8);
+  tem2 = com.substring(i + 6, i + 9);
   i = 0;
   i = com.indexOf("temNow");
-  temnow = com.substring(i + 8, i + 10);
+  temnow = com.substring(i + 8, i + 11);
   i = 0;
-  i = com.indexOf("humidity");
+  i = com.indexOf("humidity"); // humidity="88%" time="22:00"
   humi = com.substring(i + 10, i + 13); //humidity="27%"
   i = 0;
   i = com.indexOf("state1");
@@ -193,6 +190,7 @@ void data() {
   i = com.indexOf("state2");
   state2 = com.substring(i + 7, i + 11);
   i = 0;
+  com = "";
 }
 /*********************************************屏幕显示**************************************************/
 void show()
@@ -209,16 +207,6 @@ void show()
   Serial.print("BS12(8,130,210,1,'"); Serial.print(english); Serial.println("',13);");
   delay(300);
 }
-void setup()
-{
-  Serial.begin(115200);
-  
-  peiwang();
-  pinMode(LED, OUTPUT);
-  digitalWrite(LED, 0);
-  open_show();
-  
-}
 void loop()
 {
   digitalWrite(LED, 1);
@@ -233,5 +221,5 @@ void loop()
   tianqi();
   digitalWrite(LED, 0);
   Serial.println("PIC(125,40,13);");
-  delay(200);
+  delay(1000);
 }
